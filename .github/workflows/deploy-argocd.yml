@@ -64,8 +64,8 @@ jobs:
 
       - name: Update values.yaml with new image tag and repository URI
         run: |
-          sed -i 's|repository: .*|repository: ${{ steps.get_uri.outputs.repository_uri }}|' ./app/charts/values.yaml
-          sed -i 's|tag: ".*"|tag: "${{ steps.get_latest_tag.outputs.latest_tag }}"|' ./app/charts/values.yaml
+          sed -i 's|repository: .*|repository: ${{ steps.get_uri.outputs.repository_uri }}|' app/charts/values.yaml
+          sed -i 's|tag: ".*"|tag: "${{ steps.get_latest_tag.outputs.latest_tag }}"|' app/charts/values.yaml
 
       - name: Commit e push das mudanças
         run: |
