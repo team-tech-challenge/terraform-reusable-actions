@@ -38,7 +38,7 @@ jobs:
         with:
           repository: ${{ inputs.destination_repo }}
           ref: ${{ inputs.destination_branch }}
-          path: app/
+          path: ./app
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -67,7 +67,7 @@ jobs:
 
       - name: Debug list directorys
         run: |
-          ls -la
+          ls -lha ./app
 
       - name: Update values.yaml with new image tag and repository URI
         run: |
