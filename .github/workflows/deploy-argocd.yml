@@ -27,6 +27,9 @@ on:
       ECR_REPOSITORY:
         required: true
         description: "AWS ECR Repository Name"
+      API_TOKEN_GITHUB:
+        required: true
+        description: "GitHub API Token"
 
 jobs:
   deploy-argocd:
@@ -38,6 +41,7 @@ jobs:
         with:
           repository: ${{ inputs.destination_repo }}
           ref: ${{ inputs.destination_branch }}
+          token: ${{ secrets.API_TOKEN_GITHUB }}
           path: ./
 
       - name: Configure AWS credentials
@@ -65,10 +69,6 @@ jobs:
           echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
           echo "Latest image tag: $latest_tag"
 
-      - name: Debug list directorys
-        run: |
-          ls -lha ./app
-
       - name: Update values.yaml with new image tag and repository URI
         run: |
           sed -i 's|repository: .*|repository: $REPO_URI|' ./app/charts/values.yaml
@@ -80,5 +80,5 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "[email protected]"
           git add .
-          git commit -m "Atualizando values.yaml com o novo repositório e tag da imagem"
+          git commit -m "Update image tag and repository URI"
           git push origin ${{ inputs.destination_branch }}
