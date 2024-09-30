@@ -74,10 +74,8 @@ jobs:
 
       - name: Update values.yaml with new image tag and repository URI
         run: |
-          REPO_URI=${{ steps.get_uri.outputs.repository_uri }}
-          LATEST_TAG=${{ steps.get_latest_tag.outputs.latest_tag }}
-          sed -i 's|repository: .*|repository: '"$REPO_URI"'|' ./app/charts/values.yaml
-          sed -i 's|tag: "[^"]*"|tag: "'"$LATEST_TAG"'"|' ./app/charts/values.yaml
+          sed -i "s|repository: .*|repository: $REPO_URI|" ./app/charts/values.yaml
+          sed -i "s|tag: \".*\"|tag: $LATEST_TAG|" ./app/charts/values.yaml
 
       - name: Check updated values.yaml
         run: cat ./app/charts/values.yaml
