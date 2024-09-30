@@ -75,7 +75,7 @@ jobs:
       - name: Update values.yaml with new image tag and repository URI
         run: |
           sed -i "s|repository: .*|repository: $REPO_URI|" ./app/charts/values.yaml
-          sed -i "s|tag: \".*\"|tag: $LATEST_TAG|" ./app/charts/values.yaml
+          sed -i "s|tag:.*|tag: \"$LATEST_TAG\"|" ./app/charts/values.yaml
 
       - name: Check updated values.yaml
         run: cat ./app/charts/values.yaml
