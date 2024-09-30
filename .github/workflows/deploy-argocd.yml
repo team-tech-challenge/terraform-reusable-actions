@@ -54,14 +54,14 @@ jobs:
       - name: Get the ECR Repository URI
         id: get_uri
         run: |
-          repository_uri=$(aws ecr describe-repositories --repository-names ${{ inputs.ecr_repository }} --query 'repositories[0].repositoryUri' --output text)
+          repository_uri=$(aws ecr describe-repositories --repository-names ${{ secrets.ECR_REPOSITORY }} --query 'repositories[0].repositoryUri' --output text)
           echo "::set-output name=repository_uri::$repository_uri"
 
       - name: Get the latest image tag from ECR
         id: get_latest_tag
         run: |
           latest_tag=$(aws ecr describe-images \
-            --repository-name ${{ inputs.ecr_repository }} \
+            --repository-name ${{ secrets.ECR_REPOSITORY }} \
             --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' \
             --output text)
           echo "::set-output name=latest_tag::$latest_tag"
