@@ -64,18 +64,10 @@ jobs:
           echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
           echo "Latest image tag: $latest_tag"
 
-      - name: Debug file structure
-        run: |
-          echo "Current directory: $(pwd)"
-          echo "Listing files in current directory:"
-          ls -al
-          echo "Listing files in 'charts' directory:"
-          ls -al charts/
-
       - name: Update values.yaml with new image tag and repository URI
         run: |
-          sed -i 's|repository: .*|repository: $REPO_URI|' charts/values.yaml
-          sed -i 's|tag: ".*"|tag: "$LATEST_TAG"|' charts/values.yaml
+          sed -i 's|repository: .*|repository: $REPO_URI|' app/charts/values.yaml
+          sed -i 's|tag: ".*"|tag: "$LATEST_TAG"|' app/charts/values.yaml
 
       - name: Commit e push das mudanças
         run: |
