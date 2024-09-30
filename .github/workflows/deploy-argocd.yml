@@ -2,6 +2,15 @@ name: 'ArgoCD Deploy'
 
 on:
   workflow_call:
+    inputs:
+      destination_repo:
+        description: "Destination repository to execute the action"
+        required: true
+        type: string
+      destination_folder:
+        description: "Destination folder to copy the file"
+        required: true
+        type: string
     secrets:
       AWS_SECRET_ACCESS_KEY:
         required: true
@@ -18,19 +27,17 @@ on:
       ECR_REPOSITORY:
         required: true
         description: "AWS ECR Repository Name"
+      API_TOKEN_GITHUB:
+        required: true
+        description: "GitHub API Token"
 
 jobs:
   deploy-argocd:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      actions: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -43,14 +50,14 @@ jobs:
       - name: Get the ECR Repository URI
         id: get_uri
         run: |
-          repository_uri=$(aws ecr describe-repositories --repository-names ${{ secrets.ECR_REPOSITORY }} --query 'repositories[0].repositoryUri' --output text)
+          repository_uri=$(aws ecr describe-repositories --repository-names ${{ inputs.ecr_repository }} --query 'repositories[0].repositoryUri' --output text)
           echo "::set-output name=repository_uri::$repository_uri"
 
       - name: Get the latest image tag from ECR
         id: get_latest_tag
         run: |
           latest_tag=$(aws ecr describe-images \
-            --repository-name ${{ secrets.ECR_REPOSITORY }} \
+            --repository-name ${{ inputs.ecr_repository }} \
             --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' \
             --output text)
           echo "::set-output name=latest_tag::$latest_tag"
@@ -60,10 +67,14 @@ jobs:
           sed -i 's|repository: .*|repository: ${{ steps.get_uri.outputs.repository_uri }}|' ./app/charts/values.yaml
           sed -i 's|tag: ".*"|tag: "${{ steps.get_latest_tag.outputs.latest_tag }}"|' ./app/charts/values.yaml
 
-      - name: Commit and push changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add .
-          git commit -m "Automated update of values.yaml with latest image tag and repository URI"
-          git push
+      - name: Copy updated file to another repository
+        uses: dmnemec/copy_file_to_another_repo_action@v1.1.1
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        with:
+          source_file: './app/charts/values.yaml'
+          destination_repo: ${{ inputs.destination_repo }}
+          destination_folder: ${{ inputs.destination_folder }}
+          user_email: '[email protected]'
+          user_name: 'GitHub Action'
+          commit_message: 'Automated update of values.yaml with latest image tag and repository URI'
