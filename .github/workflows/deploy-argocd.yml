@@ -65,6 +65,10 @@ jobs:
           echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
           echo "Latest image tag: $latest_tag"
 
+      - name: Debug list directorys
+        run: |
+          ls -la
+
       - name: Update values.yaml with new image tag and repository URI
         run: |
           sed -i 's|repository: .*|repository: $REPO_URI|' ./app/charts/values.yaml
