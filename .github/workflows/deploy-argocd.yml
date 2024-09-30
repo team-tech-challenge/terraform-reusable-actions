@@ -11,6 +11,10 @@ on:
         description: "Destination folder to copy the file"
         required: true
         type: string
+      destination_branch:
+        description: "Branch of the destination repository"
+        required: false
+        type: string
     secrets:
       AWS_SECRET_ACCESS_KEY:
         required: true
@@ -75,6 +79,7 @@ jobs:
           source_file: './app/charts/values.yaml'
           destination_repo: ${{ inputs.destination_repo }}
           destination_folder: ${{ inputs.destination_folder }}
+          destination_branch: ${{ inputs.destination_branch }}
           user_email: '[email protected]'
           user_name: 'GitHub Action'
           commit_message: 'Automated update of values.yaml with latest image tag and repository URI'
