@@ -1,0 +1,90 @@
+name: 'ArgoCD Deploy'
+
+on:
+  workflow_call:
+    inputs:
+      destination_repo:
+        description: "Destination repository to execute the action"
+        required: true
+        type: string
+      destination_branch:
+        description: "Branch of the destination repository"
+        required: false
+        type: string
+    secrets:
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+        description: "AWS Secret Access Key"
+      AWS_ACCESS_KEY_ID:
+        required: true
+        description: "AWS Access Key ID"
+      AWS_REGION:
+        required: true
+        description: "AWS Region"
+      AWS_SESSION_TOKEN:
+        required: true
+        description: "AWS Session Token"
+      ECR_REPOSITORY:
+        required: true
+        description: "AWS ECR Repository Name"
+      API_TOKEN_GITHUB:
+        required: true
+        description: "GitHub API Token"
+
+jobs:
+  deploy-argocd:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          repository: ${{ inputs.destination_repo }}
+          ref: ${{ inputs.destination_branch }}
+          token: ${{ secrets.API_TOKEN_GITHUB }}
+          path: ./
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Get the ECR Repository URI
+        id: get_uri
+        run: |
+          repository_uri=$(aws ecr describe-repositories --repository-names ${{ secrets.ECR_REPOSITORY }} --query 'repositories[0].repositoryUri' --output text)
+          echo "REPO_URI=$repository_uri" >> $GITHUB_ENV
+          echo "ECR Repository URI: $repository_uri"
+
+      - name: Get the latest image tag from ECR
+        id: get_latest_tag
+        run: |
+          latest_tag=$(aws ecr describe-images \
+            --repository-name ${{ secrets.ECR_REPOSITORY }} \
+            --query 'sort_by(imageDetails,& imagePushedAt)[-1].imageTags[0]' \
+            --output text)
+          echo "LATEST_TAG=$latest_tag" >> $GITHUB_ENV
+          echo "Latest image tag: $latest_tag"
+
+      - name: Verify file existence
+        run: ls -la ./app/charts/
+
+      - name: Update values.yaml with new image tag and repository URI
+        run: |
+          sed -i "s|repository: .*|repository: $REPO_URI|" ./app/charts/values.yaml
+          sed -i "s|tag:.*|tag: \"$LATEST_TAG\"|" ./app/charts/values.yaml
+
+      - name: Check updated values.yaml
+        run: cat ./app/charts/values.yaml
+
+      - name: Commit e push changes
+        run: |
+          cd ./app
+          git config --global user.name "GitHub Action"
+          git config --global user.email "[email protected]"
+          git add .
+          git commit -m "Update image tag and repository URI"
+          git push origin ${{ inputs.destination_branch }}

@@ -1,7 +1,12 @@
-name: "ECR Repository Management"
+name: 'Terraform Deploy'
 
 on:
   workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+        description: "Environment to deploy"
     secrets:
       AWS_SECRET_ACCESS_KEY:
         required: true
@@ -15,12 +20,9 @@ on:
       AWS_REGION:
         required: true
         description: "AWS Region"
-      ECR_REPOSITORY:
-        required: true
-        description: "ECR Repository Name"
       WORKING_DIRECTORY:
         required: true
-        description: "Working directory"
+        description: "Working Directory"
       TF_BACKEND_KEY:
         required: true
         description: "Terraform Backend Key"
@@ -30,12 +32,15 @@ on:
       TF_BACKEND_BUCKET:
         required: true
         description: "Terraform Backend Bucket"
+      EKS_CLUSTER_NAME:
+        required: true
+        description: "EKS Cluster Name"
 
 jobs:
-  ecr:
+  deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       actions: write
 
     steps:
@@ -43,11 +48,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.7.5
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v3
@@ -57,23 +57,28 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Initialize Terraform
+      - name: Configure kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Initialize Terraform for Deploy
+        env:
+          TF_VAR_workspace_environment: ${{ inputs.environment }}
         run: |
           terraform init -upgrade -backend-config="bucket=${{ secrets.TF_BACKEND_BUCKET }}" -backend-config="key=${{ secrets.TF_BACKEND_KEY }}" -backend-config="region=${{ secrets.TF_BACKEND_REGION }}"
         working-directory: ${{ secrets.WORKING_DIRECTORY }}
 
-      - name: Plan Terraform for ECR
+      - name: Terraform Plan for Deploy
         env:
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          TF_VAR_workspace_environment: ${{ inputs.environment }}
         run: |
-          TARGET_MODULE="module.${{ env.ECR_REPOSITORY }}.module.aws_ecr_repository.aws_ecr_repository.this[0]"
-          terraform plan -target=$TARGET_MODULE
+          terraform plan -var="workspace_environment=${{ inputs.environment }}" -out=tfplan-${{ inputs.environment }}
         working-directory: ${{ secrets.WORKING_DIRECTORY }}
 
-      - name: Apply Terraform for ECR
-        env:
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-        run: |
-          TARGET_MODULE="module.${{ env.ECR_REPOSITORY }}.module.aws_ecr_repository.aws_ecr_repository.this[0]"
-          terraform apply -target=$TARGET_MODULE -auto-approve
+      - name: Terraform Validate for Deploy
+        run: terraform validate
+        working-directory: ${{ secrets.WORKING_DIRECTORY }}
+
+      - name: Terraform Apply for Deploy
+        run: terraform apply -auto-approve tfplan-${{ inputs.environment }}
         working-directory: ${{ secrets.WORKING_DIRECTORY }}
