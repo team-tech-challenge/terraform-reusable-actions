@@ -34,12 +34,6 @@ jobs:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
 
-      - name: Lint code
-        run: |
-          echo "Running lint checks..."
-          npm run lint
-        continue-on-error: true
-
       - name: Run tests
         run: |
           echo "Running tests..."
