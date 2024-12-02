@@ -26,16 +26,25 @@ jobs:
         with:
           node-version: ${{ inputs.node_version }}
           cache: 'npm'
+          check-lockfile: false
 
       - name: Install dependencies
-        run: npm install
+        run: |
+          echo "Installing dependencies..."
+          npm install
+        env:
+          CI: true
 
       - name: Lint code
-        run: npm run lint
+        run: |
+          echo "Running lint checks..."
+          npm run lint
         continue-on-error: true
 
       - name: Run tests
-        run: ${{ inputs.test_command }}
+        run: |
+          echo "Running tests..."
+          ${{ inputs.test_command }}
 
       - name: Upload test results (optional)
         if: success()
