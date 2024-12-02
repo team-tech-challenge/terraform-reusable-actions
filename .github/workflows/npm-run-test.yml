@@ -21,19 +21,18 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Use Node.js version
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ inputs.node_version }}
-          cache: 'npm'
-          check-lockfile: false
-
-      - name: Install dependencies
+      - name: Install dependencies (without lock file caching)
         run: |
           echo "Installing dependencies..."
           npm install
         env:
           CI: true
+
+      - name: Use Node.js version
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: 'npm'
 
       - name: Lint code
         run: |
